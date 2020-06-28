@@ -26,6 +26,7 @@ class SSEPacket {
 
 	SSEPacket() {
 		payload = new StringBuilder();
+		//TODO : Implement circular buffer
 		bufferStream = new StringBuilder();
 	}
 
