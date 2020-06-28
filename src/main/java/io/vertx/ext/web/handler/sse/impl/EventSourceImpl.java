@@ -7,7 +7,6 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.handler.sse.EventSource;
-import io.vertx.ext.web.handler.sse.SSEHeaders;
 import io.vertx.ext.web.handler.sse.exceptions.ConnectionRefusedException;
 
 import java.util.HashMap;
@@ -102,27 +101,21 @@ public class EventSourceImpl implements EventSource {
 		if (currentPacket == null) {
 			currentPacket = new SSEPacket();
 		}
-		boolean terminated = currentPacket.append(buffer);
-		if (terminated) {
-			// choose the right handler and call it
-			Handler<String> handler = messageHandler;
-			String header = currentPacket.headerName;
-			if (header == null) {
+		currentPacket.append(buffer);
+		if (currentPacket.isComplete()) {
+			lastId = currentPacket.lastEvenId;
+
+			if (currentPacket.isDataEmpty()) {
+				return;
+			}
+
+			Handler<String> handler;
+			if (!currentPacket.eventType.isEmpty()) {
+				handler = eventHandlers.get(currentPacket.eventType);
+				handler.handle(currentPacket.toString());
+			}
+			else {
 				messageHandler.handle(currentPacket.toString());
-			} else {
-				switch (currentPacket.headerName) {
-					case SSEHeaders.EVENT:
-						handler = eventHandlers.get(currentPacket.headerValue);
-						break;
-					case SSEHeaders.ID:
-						lastId = currentPacket.headerValue;
-						break;
-					case SSEHeaders.RETRY:
-						// FIXME : we should automatically handle this ?
-				}
-				if (handler != null) {
-					handler.handle(currentPacket.toString());
-				}
 			}
 			currentPacket = null;
 		}
