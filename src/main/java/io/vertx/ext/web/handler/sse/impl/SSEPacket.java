@@ -1,9 +1,10 @@
 package io.vertx.ext.web.handler.sse.impl;
 
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.RecordParser;
 
-class SSEPacket {
+class SSEPacket implements Handler<Buffer> {
 
 	/* Use constants, but hope this will never change in the future (it should'nt) */
 	public static final String LINE_SEPARATOR = "\n";
@@ -18,16 +19,9 @@ class SSEPacket {
 	String lastEvenId;
 	int reconnectionTime;
 	private boolean dispatchEvent;
-	private RecordParser recordParser;
 
 	SSEPacket() {
-		recordParser = RecordParser.newDelimited("\n");
-		recordParser.handler( h -> parseLine(h.toString()));
 		payload = new StringBuilder(1024);
-	}
-
-	void append(Buffer buffer) {
-		recordParser.handle(buffer);
 	}
 
 	private void parseLine(String line) {
@@ -82,5 +76,10 @@ class SSEPacket {
 
 	public boolean isDataEmpty() {
 		return payload.toString().isEmpty();
+	}
+
+	@Override
+	public void handle(Buffer event) {
+		parseLine(event.toString());
 	}
 }

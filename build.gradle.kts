@@ -3,7 +3,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 val vertxVersion = "3.9.1"
 val junit5Version = "5.3.1"
 
-group = "com.github.aesteve"
+group = "com.github.dr-divago"
 version = vertxVersion // align with Vert.x version
 
 plugins {

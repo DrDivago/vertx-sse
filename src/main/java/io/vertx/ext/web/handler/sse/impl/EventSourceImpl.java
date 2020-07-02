@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.parsetools.RecordParser;
 import io.vertx.ext.web.handler.sse.EventSource;
 import io.vertx.ext.web.handler.sse.exceptions.ConnectionRefusedException;
 
@@ -23,12 +24,14 @@ public class EventSourceImpl implements EventSource {
 	private final Vertx vertx;
 	private final HttpClientOptions options;
 	private Handler<Void> closeHandler;
+	private RecordParser recordParser;
 
 	public EventSourceImpl(Vertx vertx, HttpClientOptions options) {
 		options.setKeepAlive(true);
 		this.vertx = vertx;
 		this.options = options;
 		eventHandlers = new HashMap<>();
+		this.recordParser = RecordParser.newDelimited("\n");
 	}
 
 	@Override
@@ -100,8 +103,10 @@ public class EventSourceImpl implements EventSource {
 	private void handleMessage(Buffer buffer) {
 		if (currentPacket == null) {
 			currentPacket = new SSEPacket();
+			recordParser.handler(currentPacket);
 		}
-		currentPacket.append(buffer);
+
+		recordParser.handle(buffer);
 		if (currentPacket.isComplete()) {
 			lastId = currentPacket.lastEvenId;
 
