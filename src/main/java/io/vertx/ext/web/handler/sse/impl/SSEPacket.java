@@ -1,20 +1,15 @@
 package io.vertx.ext.web.handler.sse.impl;
 
 import io.vertx.core.buffer.Buffer;
-
-import java.util.stream.Stream;
+import io.vertx.core.parsetools.RecordParser;
 
 class SSEPacket {
 
 	/* Use constants, but hope this will never change in the future (it should'nt) */
-	private static final String END_OF_PACKET = "\n\n";
 	public static final String LINE_SEPARATOR = "\n";
 	private static final String FIELD_SEPARATOR = ":";
 
 	private final StringBuilder payload;
-	private StringBuilder bufferStream;
-	private int beginBuffer = 0;
-	private int endBuffer = 0;
 
 	String eventType;
 	private String field;
@@ -23,28 +18,19 @@ class SSEPacket {
 	String lastEvenId;
 	int reconnectionTime;
 	private boolean dispatchEvent;
+	private RecordParser recordParser;
 
 	SSEPacket() {
-		payload = new StringBuilder();
-		//TODO : Implement circular buffer
-		bufferStream = new StringBuilder();
+		recordParser = RecordParser.newDelimited("\n");
+		recordParser.handler( h -> parseLine(h.toString()));
+		payload = new StringBuilder(1024);
 	}
 
 	void append(Buffer buffer) {
-		String response = buffer.toString();
-		bufferStream.append(response);
-		endBuffer = bufferStream.length() -1;
-
-		int idxEndOfLine = bufferStream.indexOf("\n", beginBuffer);
-		while (idxEndOfLine != -1) {
-			parseLine(beginBuffer, idxEndOfLine);
-			beginBuffer = idxEndOfLine + 1;
-			idxEndOfLine = bufferStream.indexOf("\n", beginBuffer);
-		}
+		recordParser.handle(buffer);
 	}
 
-	private void parseLine(int begin, int end) {
-		String line = bufferStream.substring(begin,end);
+	private void parseLine(String line) {
 		if (line.isEmpty())
 			dispatchEvent();
 		if (line.startsWith(FIELD_SEPARATOR)) {
@@ -60,7 +46,6 @@ class SSEPacket {
 			field = line;
 			value = "";
 		}
-
 	}
 
 	private void processField(String field, String value) {
